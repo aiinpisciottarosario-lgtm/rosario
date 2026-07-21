@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iron & Keto Coach</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #17140F; font-family: 'Segoe UI', sans-serif; color: #E9F2ED; }
+    body { line-height: 1.6; }
+    #root { min-height: 100vh; padding: 32px 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .title { font-size: 2.5em; font-weight: bold; margin-bottom: 20px; color: #52E092; }
+    .panel { background: #101A17; border: 1px solid #213730; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .label { color: #2FBF71; font-weight: 600; font-size: 0.9em; text-transform: uppercase; margin-bottom: 8px; }
+    input, select, textarea {
+      width: 100%; padding: 10px; background: #0A0F0E; border: 1px solid #213730;
+      color: #E9F2ED; border-radius: 4px; font-family: inherit; margin-bottom: 12px;
+    }
+    input:focus, select:focus { outline: 2px solid #D9A860; }
+    button {
+      width: 100%; padding: 14px; background: #2FBF71; color: #17140F; border: none;
+      border-radius: 4px; font-weight: 600; font-size: 1em; cursor: pointer; transition: 0.2s;
+    }
+    button:hover { background: #52E092; }
+    button:disabled { background: #213730; cursor: not-allowed; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info { background: #16241F; padding: 12px; border-radius: 4px; font-size: 0.95em; margin: 10px 0; }
+    .stat { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #213730; }
+    .success { color: #52E092; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+
+<script>
+const { useState, useMemo } = React;
+
+// CONSTANTS
+const ACTIVITY = { sedentario: 1.2, leggero: 1.375, moderato: 1.55, attivo: 1.725, molto_attivo: 1.9 };
+const BLOCKS = [
+  { n: 1, label: "Adattamento", weeks: "1-4" },
+  { n: 2, label: "Costruzione", weeks: "5-8" },
+  { n: 3, label: "Intensificazione", weeks: "9-12" },
+  { n: 4, label: "Stress metabolico", weeks: "13-16" },
+  { n: 5, label: "Simmetria", weeks: "17-20" },
+  { n: 6, label: "Definizione", weeks: "21-24" },
+];
+
+// FUNCTIONS
+function calcBMR(p) {
+  const base = 10 * p.weight + 6.25 * p.height - 5 * p.age;
+  return p.sex === "M" ? base + 5 : base - 161;
+}
+
+function calcPlan(p, goal) {
+  const bmr = calcBMR(p);
+  const tdee = bmr * ACTIVITY[p.activity];
+  const lbm = p.weight * (p.sex === "M" ? 0.82 : 0.72);
+
+  let pct = 0;
+  if (goal === "definizione") pct = -0.20;
+  if (goal === "massa") pct = 0.12;
+
+  let targetKcal = tdee * (1 + pct);
+  const floor = p.sex === "M" ? 1500 : 1200;
+  const flooredWarning = targetKcal < floor;
+  if (flooredWarning) targetKcal = floor;
+
+  const proteinG = lbm * 1.9;
+  const carbsG = goal === "definizione" ? 20 : goal === "massa" ? 40 : 30;
+  const fatKcal = Math.max(targetKcal - proteinG * 4 - carbsG * 4, 300);
+
+  return {
+    bmr: Math.round(bmr),
+    tdee: Math.round(tdee),
+    lbm: Math.round(lbm * 10) / 10,
+    targetKcal: Math.round(targetKcal),
+    flooredWarning,
+    protein: Math.round(proteinG),
+    carbs: carbsG,
+    fat: Math.round(fatKcal / 9),
+    proteinKcal: Math.round(proteinG * 4),
+    carbsKcal: carbsG * 4,
+    fatKcal: Math.round(fatKcal),
+  };
+}
+
+// COMPONENTS
+function IntakeForm({ onComplete }) {
+  const [f, setF] = useState({
+    userName: "",
+    sex: "M",
+    age: 28,
+    height: 178,
+    weight: 82,
+    activity: "moderato",
+    goal: "definizione",
+    trainingDays: 4,
+  });
+
+  const canSubmit = f.height > 0 && f.weight > 0 && f.age > 0;
+
+  return (
+    <div className="container">
+      <div className="title">🏋️ IRON & KETO COACH</div>
+
+      <div className="panel">
+        <div className="label">I Tuoi Dati</div>
+
+        <input
+          type="text"
+          placeholder="Il tuo nome"
+          value={f.userName}
+          onChange={(e) => setF({...f, userName: e.target.value})}
+        />
+
+        <div className="grid">
+          <div>
+            <div className="label">Sesso</div>
+            <select value={f.sex} onChange={(e) => setF({...f, sex: e.target.value})}>
+              <option value="M">Uomo</option>
+              <option value="F">Donna</option>
+            </select>
+          </div>
+          <div>
+            <div className="label">Età</div>
+            <input type="number" value={f.age} onChange={(e) => setF({...f, age: parseInt(e.target.value)})} />
+          </div>
+        </div>
+
+        <div className="grid">
+          <div>
+            <div className="label">Altezza (cm)</div>
+            <input type="number" value={f.height} onChange={(e) => setF({...f, height: parseInt(e.target.value)})} />
+          </div>
+          <div>
+            <div className="label">Peso (kg)</div>
+            <input type="number" value={f.weight} onChange={(e) => setF({...f, weight: parseFloat(e.target.value)})} />
+          </div>
+        </div>
+
+        <div className="label">Attività</div>
+        <select value={f.activity} onChange={(e) => setF({...f, activity: e.target.value})}>
+          <option value="sedentario">Sedentario</option>
+          <option value="leggero">Leggero (1-3 allenamenti/sett)</option>
+          <option value="moderato">Moderato (3-5 allenamenti/sett)</option>
+          <option value="attivo">Attivo (6-7 allenamenti/sett)</option>
+          <option value="molto_attivo">Molto attivo (2x/die)</option>
+        </select>
+
+        <div className="label">Obiettivo</div>
+        <select value={f.goal} onChange={(e) => setF({...f, goal: e.target.value})}>
+          <option value="definizione">Scolpitura (deficit)</option>
+          <option value="massa">Bulk (surplus)</option>
+          <option value="ricomposizione">Mantenimento</option>
+        </select>
+      </div>
+
+      <button disabled={!canSubmit} onClick={() => onComplete(f)}>
+        {canSubmit ? "GENERA IL MIO PROGRAMMA →" : "Completa i dati"}
+      </button>
+    </div>
+  );
+}
+
+function Dashboard({ profile }) {
+  const plan = useMemo(() => calcPlan(profile, profile.goal), [profile]);
+
+  return (
+    <div className="container">
+      <div className="title">
+        {profile.goal === "definizione" ? "🔥 FASE SCOLPITURA" : profile.goal === "massa" ? "💪 FASE BULK" : "⚖️ MANTENIMENTO"}
+      </div>
+
+      <div className="panel">
+        <h2>Ciao {profile.userName || "Atleta"}!</h2>
+
+        <div className="info">
+          <div className="stat">
+            <span>BMR:</span>
+            <span className="success">{plan.bmr} kcal</span>
+          </div>
+          <div className="stat">
+            <span>TDEE:</span>
+            <span className="success">{plan.tdee} kcal</span>
+          </div>
+          <div className="stat">
+            <span>Target Giornaliero:</span>
+            <span className="success">{plan.targetKcal} kcal</span>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <div className="label">Macronutrienti Chetogenici</div>
+          <div className="info">
+            <div className="stat">
+              <span>Proteine:</span>
+              <span className="success">{plan.protein}g</span>
+            </div>
+            <div className="stat">
+              <span>Grassi:</span>
+              <span className="success">{plan.fat}g</span>
+            </div>
+            <div className="stat">
+              <span>Carboidrati:</span>
+              <span className="success">{plan.carbs}g</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <h3>✅ Piano Generato</h3>
+        <ul style={{ paddingLeft: 20 }}>
+          <li>Piano alimentare chetogenico personalizzato</li>
+          <li>Allenamento per Arnold Classic / Wellness</li>
+          <li>6 blocchi di 4 settimane (24 settimane totali)</li>
+          <li>Calorie e macro ottimizzati per il tuo obiettivo</li>
+          <li>Dati salvati nel tuo browser (private)</li>
+        </ul>
+      </div>
+
+      <button onClick={() => {
+        localStorage.removeItem("ik_profile");
+        window.location.reload();
+      }}>
+        ← Torna Indietro
+      </button>
+    </div>
+  );
+}
+
+function App() {
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ik_profile");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  if (!profile) {
+    return <IntakeForm onComplete={(p) => {
+      localStorage.setItem("ik_profile", JSON.stringify(p));
+      setProfile(p);
+    }} />;
+  }
+
+  return <Dashboard profile={profile} />;
+}
+
+// RENDER
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
