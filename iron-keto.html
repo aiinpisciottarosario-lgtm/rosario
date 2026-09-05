@@ -202,10 +202,66 @@ const EXERCISE_DB = [
 // ============================================================================
 const DAYS_SPLIT = [
   { dayNum: 1, name: "Upper A", focus: "Petto, Schiena, Spalle" },
-  { dayNum: 2, name: "Lower A", focus: "Gambe, Quadricipiti, Posteriori" },
+  { dayNum: 2, name: "Lower A", focus: "Gambe, Quadricipitti, Posteriori" },
   { dayNum: 3, name: "Upper B", focus: "Petto, Schiena, Spalle" },
   { dayNum: 4, name: "Lower B", focus: "Gambe, Polpacci" },
 ];
+
+// ============================================================================
+// CONSTANTS - TARGET MISURE (Classic Physique/Wellness)
+// ============================================================================
+const CLASSIC_TARGETS = {
+  M: { // Uomo - Classic Physique
+    petto: 110,
+    schiena: 48,
+    spalle: 42,
+    braccia: 37,
+    avambracci: 30,
+    polpacci: 38,
+    cosce: 58,
+    gambe: 58,
+  },
+  F: { // Donna - Wellness
+    petto: 85,
+    schiena: 38,
+    spalle: 32,
+    braccia: 28,
+    avambracci: 23,
+    polpacci: 32,
+    cosce: 48,
+    gambe: 48,
+  }
+};
+
+// ============================================================================
+// CONSTANTS - ESERCIZI EXTRA PER CARENZE (2 per zona)
+// ============================================================================
+const EXTRA_EXERCISE = {
+  petto: [
+    { name: "Pec Deck Macchina", eng: "Pec Deck Machine", group: "petto", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s" },
+    { name: "Butterfly Macchina", eng: "Butterfly Machine", group: "petto", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s" },
+  ],
+  schiena: [
+    { name: "Pulley Dietro", eng: "Behind Neck Pulldown", group: "schiena", equipment: "macchina", reps: "8-10", rpe: 6, sets: 3, rest: "90-120s" },
+    { name: "T-Bar Row Macchina", eng: "T-Bar Row Machine", group: "schiena", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s" },
+  ],
+  spalle: [
+    { name: "Laterali Macchina", eng: "Machine Lateral Raise", group: "spalle", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s" },
+    { name: "Posterior Deltoid", eng: "Posterior Deltoid Machine", group: "spalle", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s" },
+  ],
+  braccia: [
+    { name: "Curl Macchina Concentrato", eng: "Machine Preacher Curl", group: "braccia", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s" },
+    { name: "Tricep Overhead", eng: "Overhead Tricep Machine", group: "braccia", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s" },
+  ],
+  gambe: [
+    { name: "Pendulum Squat", eng: "Pendulum Squat Machine", group: "gambe", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "90-120s" },
+    { name: "Sissy Squat Macchina", eng: "Sissy Squat Machine", group: "gambe", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "90-120s" },
+  ],
+  polpacci: [
+    { name: "Polpacci Leg Press", eng: "Calf Raise Leg Press", group: "polpacci", equipment: "macchina", reps: "15-20", rpe: 5, sets: 3, rest: "45-60s" },
+    { name: "Polpacci Machine", eng: "Seated Calf Raise", group: "polpacci", equipment: "macchina", reps: "12-15", rpe: 6, sets: 4, rest: "60-90s" },
+  ],
+};
 
 // ============================================================================
 // FUNZIONI - CALCOLI BMR/TDEE/MACROS
@@ -246,6 +302,41 @@ function calcPlan(p, goal) {
     carbsKcal: carbsG * 4,
     fatKcal: Math.round(fatKcal),
   };
+}
+
+// ============================================================================
+// FUNZIONI - RILEVAMENTO CARENZE
+// ============================================================================
+function laggingParts(profile, measurements = {}) {
+  // Confronta misure utente ai target di riferimento
+  // Ritorna top 2 gruppi muscolari sotto target
+
+  if (!measurements || Object.keys(measurements).length === 0) {
+    return []; // Nessuna misura disponibile
+  }
+
+  const targets = CLASSIC_TARGETS[profile.sex];
+  const deltas = {};
+
+  Object.keys(targets).forEach(part => {
+    const target = targets[part];
+    const measured = measurements[part] || 0;
+    const percentageOfTarget = measured / target;
+    deltas[part] = {
+      target,
+      measured,
+      percentageOfTarget,
+      delta: measured - target,
+    };
+  });
+
+  // Ordina per percentuale (dal più basso)
+  const sorted = Object.entries(deltas)
+    .sort((a, b) => a[1].percentageOfTarget - b[1].percentageOfTarget)
+    .filter(([_, d]) => d.percentageOfTarget < 0.95); // Solo quelli sotto il 95% del target
+
+  // Ritorna top 2
+  return sorted.slice(0, 2).map(([part, _]) => part);
 }
 
 // ============================================================================
@@ -376,21 +467,33 @@ function buildMealPlan(profile, plan, pantryItems = [], dayIndex = 0, supplement
 // ============================================================================
 // FUNZIONI - MOTORE ALLENAMENTO
 // ============================================================================
-function buildTrainingDay(dayNum, goal) {
-  const dayExercises = EXERCISE_DB.filter(e => e.day === dayNum);
+function buildTrainingDay(dayNum, goal, laggingParts = []) {
+  let dayExercises = EXERCISE_DB.filter(e => e.day === dayNum);
 
   // Adatta gli esercizi in base al goal (definizione: sostituzione a macchine dopo 2 esercizi)
   if (goal === "definizione") {
-    return dayExercises.map((ex, idx) => {
+    dayExercises = dayExercises.map((ex, idx) => {
       if (idx > 1 && ex.equipment === "bilanciere") {
-        // Sostituzione a macchina (se possibile)
         return { ...ex, equipment: "macchina", reps: "10-12", rest: "60-90s" };
       }
       return ex;
     });
   }
 
-  return dayExercises;
+  // Aggiungi esercizi extra per carenze in CIMA al giorno
+  const extraExercises = [];
+  laggingParts.forEach(lagPart => {
+    const possibleExtras = EXTRA_EXERCISE[lagPart] || [];
+    possibleExtras.forEach(extraEx => {
+      // Aggiungi SOLO se questo giorno allena quel gruppo muscolare
+      if (dayExercises.some(e => e.group === lagPart || e.group === extraEx.group)) {
+        extraExercises.push({ ...extraEx, isExtra: true, day: dayNum });
+      }
+    });
+  });
+
+  // Inserisci extra in cima, poi gli esercizi normali
+  return [...extraExercises, ...dayExercises];
 }
 
 // ============================================================================
@@ -473,9 +576,16 @@ function IntakeForm({ onComplete }) {
   );
 }
 
-function Dashboard({ profile }) {
+function Dashboard({ profile: initialProfile, onProfileUpdate }) {
+  const [profile, setProfile] = useState(initialProfile);
   const plan = useMemo(() => calcPlan(profile, profile.goal), [profile]);
   const [activeTab, setActiveTab] = useState("nutrition");
+
+  const handleProfileUpdate = (updates) => {
+    const newProfile = { ...profile, ...updates };
+    setProfile(newProfile);
+    if (onProfileUpdate) onProfileUpdate(newProfile);
+  };
 
   return (
     <div className="container">
@@ -528,10 +638,14 @@ function Dashboard({ profile }) {
         <button className={`tab-btn ${activeTab === 'workout' ? 'active' : ''}`} onClick={() => setActiveTab('workout')}>
           🏋️ Allenamento
         </button>
+        <button className={`tab-btn ${activeTab === 'carences' ? 'active' : ''}`} onClick={() => setActiveTab('carences')}>
+          ⚡ Carenze
+        </button>
       </div>
 
       {activeTab === 'nutrition' && <NutritionPanel plan={plan} profile={profile} />}
       {activeTab === 'workout' && <WorkoutPanel profile={profile} />}
+      {activeTab === 'carences' && <LaggingPartsManager profile={profile} onUpdate={handleProfileUpdate} />}
 
       <button onClick={() => {
         localStorage.removeItem("ik_profile");
@@ -539,6 +653,109 @@ function Dashboard({ profile }) {
       }} style={{ marginTop: 20, background: '#D9A860' }}>
         ← Torna Indietro
       </button>
+    </div>
+  );
+}
+
+function LaggingPartsManager({ profile, onUpdate }) {
+  const [measurements, setMeasurements] = React.useState(profile.measurements || {});
+  const [selectedCarences, setSelectedCarences] = React.useState(profile.selectedCarences || []);
+  const [showMeasurements, setShowMeasurements] = React.useState(false);
+
+  const auto_lagging = laggingParts(profile, measurements);
+  const current_lagging = selectedCarences.length > 0 ? selectedCarences : auto_lagging;
+
+  const handleMeasurementChange = (part, value) => {
+    const newMeasurements = { ...measurements, [part]: parseFloat(value) || 0 };
+    setMeasurements(newMeasurements);
+    onUpdate({ measurements: newMeasurements, selectedCarences });
+  };
+
+  const toggleCarence = (part) => {
+    let newCarences = [...selectedCarences];
+    if (newCarences.includes(part)) {
+      newCarences = newCarences.filter(c => c !== part);
+    } else {
+      if (newCarences.length < 2) {
+        newCarences.push(part);
+      } else {
+        newCarences[newCarences.length - 1] = part;
+      }
+    }
+    setSelectedCarences(newCarences);
+    onUpdate({ measurements, selectedCarences: newCarences });
+  };
+
+  const targets = CLASSIC_TARGETS[profile.sex];
+
+  return (
+    <div className="panel">
+      <div className="subtitle">⚡ CARENZE - Specializzazione</div>
+
+      <button
+        onClick={() => setShowMeasurements(!showMeasurements)}
+        style={{marginBottom: 15, width: '100%', background: '#D9A860'}}
+      >
+        {showMeasurements ? '▼ Nascondi Misure' : '▲ Aggiungi Misure'}
+      </button>
+
+      {showMeasurements && (
+        <div style={{background: '#16241F', padding: 15, borderRadius: 4, marginBottom: 15}}>
+          <div className="label">Inserisci le tue misure (cm)</div>
+          <div className="grid-3">
+            {Object.keys(targets).map(part => (
+              <div key={part}>
+                <label style={{fontSize: '0.85em', display: 'block', marginBottom: 5}}>
+                  {part.charAt(0).toUpperCase() + part.slice(1).replace(/o$/, 'a')}
+                  <br/>
+                  <span style={{color: '#999', fontSize: '0.8em'}}>target: {targets[part]}</span>
+                </label>
+                <input
+                  type="number"
+                  value={measurements[part] || ''}
+                  onChange={(e) => handleMeasurementChange(part, e.target.value)}
+                  placeholder="0"
+                  style={{width: '100%', marginBottom: 0}}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="label">Scegli fino a 2 zone carenti</div>
+      {auto_lagging.length > 0 && !selectedCarences.length > 0 && (
+        <div style={{fontSize: '0.9em', color: '#D9A860', marginBottom: 10}}>
+          💡 Rilevate automaticamente: {auto_lagging.join(', ')}
+        </div>
+      )}
+
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10}}>
+        {Object.keys(targets).map(part => (
+          <button
+            key={part}
+            onClick={() => toggleCarence(part)}
+            style={{
+              padding: 10,
+              background: selectedCarences.includes(part) ? '#2FBF71' : '#16241F',
+              color: selectedCarences.includes(part) ? '#17140F' : '#E9F2ED',
+              border: '1px solid ' + (auto_lagging.includes(part) ? '#D9A860' : '#213730'),
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontWeight: selectedCarences.includes(part) ? 'bold' : 'normal',
+            }}
+          >
+            {part.charAt(0).toUpperCase() + part.slice(1).replace(/o$/, 'a')}
+            {auto_lagging.includes(part) && selectedCarences.includes(part) === false && ' ⚠️'}
+          </button>
+        ))}
+      </div>
+
+      {current_lagging.length > 0 && (
+        <div style={{marginTop: 15, padding: 12, background: '#16241F', borderRadius: 4, fontSize: '0.9em'}}>
+          <strong>✓ Esercizi mirati:</strong> {current_lagging.length} zona/e = {current_lagging.length * 2} esercizi extra in cima ai giorni relativi
+        </div>
+      )}
     </div>
   );
 }
@@ -617,28 +834,45 @@ function NutritionPanel({ plan, profile }) {
 }
 
 function WorkoutPanel({ profile }) {
+  const lagging = profile.selectedCarences && profile.selectedCarences.length > 0
+    ? profile.selectedCarences
+    : laggingParts(profile, profile.measurements || {});
+
   return (
     <div className="panel">
       <div className="subtitle">Split 4 giorni Upper/Lower x2</div>
       <p style={{fontSize: '0.9em', color: '#999', marginBottom: 15}}>Goal: <strong>{profile.goal === 'definizione' ? 'Scolpitura' : profile.goal === 'massa' ? 'Bulk' : 'Mantenimento'}</strong></p>
 
-      {DAYS_SPLIT.map(day => (
-        <div key={day.dayNum}>
-          <div style={{marginTop: 15}}>
-            <div className="label">{day.name} — {day.focus}</div>
-            {EXERCISE_DB.filter(e => e.day === day.dayNum).map((ex, idx) => (
-              <div key={idx} className="exercise-card">
-                <div className="exercise-name">
-                  {ex.name} <span style={{color: '#999', fontSize: '0.8em'}}>({ex.eng})</span>
-                </div>
-                <div className="exercise-meta">
-                  {ex.sets} x {ex.reps} • {ex.equipment} • {ex.rest} rest • RPE {ex.rpe}
-                </div>
-              </div>
-            ))}
-          </div>
+      {lagging.length > 0 && (
+        <div style={{background: '#16241F', padding: 12, borderRadius: 4, marginBottom: 15, fontSize: '0.9em'}}>
+          <strong>✓ Specializzazione attiva:</strong> {lagging.join(', ')}
+          <br/>
+          <span style={{color: '#999'}}>Esercizi extra mirati in cima ai giorni correlati</span>
         </div>
-      ))}
+      )}
+
+      {DAYS_SPLIT.map(day => {
+        const dayExercises = buildTrainingDay(day.dayNum, profile.goal, lagging);
+        return (
+          <div key={day.dayNum}>
+            <div style={{marginTop: 15}}>
+              <div className="label">{day.name} — {day.focus}</div>
+              {dayExercises.map((ex, idx) => (
+                <div key={idx} className="exercise-card" style={{borderLeftColor: ex.isExtra ? '#D9A860' : '#2FBF71'}}>
+                  <div className="exercise-name">
+                    {ex.isExtra && '⚡ '}
+                    {ex.name} <span style={{color: '#999', fontSize: '0.8em'}}>({ex.eng})</span>
+                  </div>
+                  <div className="exercise-meta">
+                    {ex.sets} x {ex.reps} • {ex.equipment} • {ex.rest} rest • RPE {ex.rpe}
+                    {ex.isExtra && <span style={{color: '#D9A860', marginLeft: 10}}>MIRATI CARENZE</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -653,6 +887,11 @@ function App() {
     }
   });
 
+  const handleProfileUpdate = (updatedProfile) => {
+    setProfile(updatedProfile);
+    localStorage.setItem("ik_profile", JSON.stringify(updatedProfile));
+  };
+
   if (!profile) {
     return <IntakeForm onComplete={(p) => {
       localStorage.setItem("ik_profile", JSON.stringify(p));
@@ -660,7 +899,7 @@ function App() {
     }} />;
   }
 
-  return <Dashboard profile={profile} />;
+  return <Dashboard profile={profile} onProfileUpdate={handleProfileUpdate} />;
 }
 
 // RENDER
