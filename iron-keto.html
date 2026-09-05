@@ -161,40 +161,40 @@ const FOOD_DB = [
 ];
 
 // ============================================================================
-// CONSTANTS - ESERCIZI (4 giorni UPPER/LOWER x2, con BILANCIERI)
+// CONSTANTS - ESERCIZI (4 giorni UPPER/LOWER x2, con MACCHINE)
 // ============================================================================
 const EXERCISE_DB = [
   // ===== GIORNO 1: UPPER A =====
-  { name: "Panca Piana", eng: "Barbell Bench Press", day: 1, group: "petto", equipment: "bilanciere", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
-  { name: "Trazioni alla sbarra", eng: "Pull-ups", day: 1, group: "schiena", equipment: "bodyweight", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
-  { name: "Lento in piedi", eng: "Standing Military Press", day: 1, group: "spalle", equipment: "bilanciere", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
-  { name: "Rematore bilanciere", eng: "Barbell Bent-Over Row", day: 1, group: "schiena", equipment: "bilanciere", reps: "8-10", rpe: 7, sets: 3, rest: "120-150s", ex_type: "compound" },
-  { name: "Curl bilanciere", eng: "Barbell Curls", day: 1, group: "braccia", equipment: "bilanciere", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
-  { name: "Distensioni tricipiti", eng: "Tricep Dips", day: 1, group: "braccia", equipment: "bodyweight", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s", ex_type: "compound" },
+  { name: "Chest Press Macchina", eng: "Machine Chest Press", day: 1, group: "petto", equipment: "macchina", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
+  { name: "Lat Pulldown", eng: "Lat Pulldown Machine", day: 1, group: "schiena", equipment: "macchina", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
+  { name: "Spalle Pressa Macchina", eng: "Machine Shoulder Press", day: 1, group: "spalle", equipment: "macchina", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
+  { name: "Rowing Machine", eng: "Hammer Strength Row", day: 1, group: "schiena", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "120-150s", ex_type: "compound" },
+  { name: "Curl Macchina", eng: "Machine Bicep Curl", day: 1, group: "braccia", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
+  { name: "Tricep Rope Pushdown", eng: "Tricep Rope Pushdown", day: 1, group: "braccia", equipment: "cavi", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
 
   // ===== GIORNO 2: LOWER A =====
-  { name: "Squat con bilanciere", eng: "Barbell Squat", day: 2, group: "gambe", equipment: "bilanciere", reps: "6-8", rpe: 8, sets: 4, rest: "240-300s", ex_type: "compound" },
-  { name: "Stacco da terra", eng: "Deadlift", day: 2, group: "gambe", equipment: "bilanciere", reps: "3-5", rpe: 8, sets: 3, rest: "240-300s", ex_type: "compound" },
-  { name: "Pressa per le gambe", eng: "Leg Press", day: 2, group: "gambe", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "120-150s", ex_type: "compound" },
-  { name: "Leg curl", eng: "Leg Curl Machine", day: 2, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
-  { name: "Estensioni gambe", eng: "Leg Extension", day: 2, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
-  { name: "Polpacci in piedi", eng: "Standing Calf Raise", day: 2, group: "polpacci", equipment: "macchina", reps: "12-15", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Leg Press Macchina", eng: "Leg Press Machine", day: 2, group: "gambe", equipment: "macchina", reps: "6-8", rpe: 8, sets: 4, rest: "240-300s", ex_type: "compound" },
+  { name: "Hack Squat Macchina", eng: "Hack Squat Machine", day: 2, group: "gambe", equipment: "macchina", reps: "8-10", rpe: 8, sets: 3, rest: "180-240s", ex_type: "compound" },
+  { name: "Pressa per le gambe", eng: "V-Squat Machine", day: 2, group: "gambe", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "120-150s", ex_type: "compound" },
+  { name: "Leg Curl Seduto", eng: "Seated Leg Curl", day: 2, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
+  { name: "Estensioni Gambe", eng: "Leg Extension Machine", day: 2, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Polpacci in Piedi", eng: "Standing Calf Raise Machine", day: 2, group: "polpacci", equipment: "macchina", reps: "12-15", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
 
   // ===== GIORNO 3: UPPER B =====
-  { name: "Panca inclinata", eng: "Incline Bench Press", day: 3, group: "petto", equipment: "bilanciere", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
-  { name: "Pulley fronte", eng: "Lat Pulldown", day: 3, group: "schiena", equipment: "macchina", reps: "8-10", rpe: 7, sets: 4, rest: "120-150s", ex_type: "compound" },
-  { name: "Alzate laterali", eng: "Lateral Raises", day: 3, group: "spalle", equipment: "manubri", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
-  { name: "Face pulls", eng: "Face Pulls", day: 3, group: "spalle", equipment: "cavi", reps: "12-15", rpe: 5, sets: 3, rest: "60-90s", ex_type: "isolation" },
-  { name: "Curl manubri", eng: "Dumbbell Curls", day: 3, group: "braccia", equipment: "manubri", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
-  { name: "Spinte sopra la testa tricipiti", eng: "Overhead Tricep Extension", day: 3, group: "braccia", equipment: "manubri", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Incline Chest Press", eng: "Incline Chest Press Machine", day: 3, group: "petto", equipment: "macchina", reps: "6-8", rpe: 8, sets: 4, rest: "180-240s", ex_type: "compound" },
+  { name: "Pulley Avanti", eng: "Lat Pulldown Machine", day: 3, group: "schiena", equipment: "macchina", reps: "8-10", rpe: 7, sets: 4, rest: "120-150s", ex_type: "compound" },
+  { name: "Spalle Alzate Laterali", eng: "Machine Lateral Raise", day: 3, group: "spalle", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Facepull Macchina", eng: "Face Pull Machine", day: 3, group: "spalle", equipment: "cavi", reps: "12-15", rpe: 5, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Curl Macchina Isolat", eng: "Isolation Bicep Curl Machine", day: 3, group: "braccia", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
+  { name: "Tricep Macchina", eng: "Tricep Press Machine", day: 3, group: "braccia", equipment: "macchina", reps: "10-12", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
 
   // ===== GIORNO 4: LOWER B =====
-  { name: "Leg press", eng: "Leg Press Machine", day: 4, group: "gambe", equipment: "macchina", reps: "8-10", rpe: 7, sets: 4, rest: "120-150s", ex_type: "compound" },
-  { name: "Affondi con bilanciere", eng: "Barbell Lunges", day: 4, group: "gambe", equipment: "bilanciere", reps: "8-10", rpe: 7, sets: 3, rest: "120-150s", ex_type: "compound" },
-  { name: "Leg curl seduto", eng: "Seated Leg Curl", day: 4, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
-  { name: "Estensioni gambe", eng: "Leg Extension", day: 4, group: "gambe", equipment: "macchina", reps: "12-15", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
-  { name: "Hack squat", eng: "Hack Squat Machine", day: 4, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 6, sets: 2, rest: "90-120s", ex_type: "compound" },
-  { name: "Polpacci seduto", eng: "Seated Calf Raise", day: 4, group: "polpacci", equipment: "macchina", reps: "12-15", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Leg Press Macchina", eng: "Leg Press Machine", day: 4, group: "gambe", equipment: "macchina", reps: "8-10", rpe: 7, sets: 4, rest: "120-150s", ex_type: "compound" },
+  { name: "Smith Machine Squat", eng: "Smith Machine Squat", day: 4, group: "gambe", equipment: "macchina", reps: "8-10", rpe: 7, sets: 3, rest: "120-150s", ex_type: "compound" },
+  { name: "Leg Curl Seduto", eng: "Seated Leg Curl Machine", day: 4, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 7, sets: 3, rest: "90-120s", ex_type: "isolation" },
+  { name: "Estensioni Gambe", eng: "Leg Extension Machine", day: 4, group: "gambe", equipment: "macchina", reps: "12-15", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
+  { name: "Hack Squat Macchina", eng: "Hack Squat Machine", day: 4, group: "gambe", equipment: "macchina", reps: "10-12", rpe: 6, sets: 2, rest: "90-120s", ex_type: "compound" },
+  { name: "Polpacci Seduto", eng: "Seated Calf Raise Machine", day: 4, group: "polpacci", equipment: "macchina", reps: "12-15", rpe: 6, sets: 3, rest: "60-90s", ex_type: "isolation" },
 ];
 
 // ============================================================================
