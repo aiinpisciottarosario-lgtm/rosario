@@ -249,6 +249,131 @@ function calcPlan(p, goal) {
 }
 
 // ============================================================================
+// FUNZIONI - MOTORE DIETA (buildMealPlan con correzioni)
+// ============================================================================
+function buildMealPlan(profile, plan, pantryItems = [], dayIndex = 0, supplements = []) {
+  // Meccanismo: calcolo sequenziale per pasto, poi 2 correzioni di precisione finali
+  // Fase 1: aggiusta proteine (ultima fonte)
+  // Fase 2: aggiusta calorie (grasso puro)
+
+  const meals = ['Colazione', 'Spuntino 1', 'Pranzo', 'Spuntino 2', 'Cena'];
+  const mealPlan = {
+    meals: [],
+    daily: { p: 0, f: 0, c: 0, kcal: 0 },
+    grand: { p: 0, f: 0, c: 0, kcal: 0 }
+  };
+
+  // Suddivisione macro per pasto (semplificata)
+  const mealMacros = [
+    { pPct: 0.15, fPct: 0.2, cPct: 0.2 },   // Colazione
+    { pPct: 0.1, fPct: 0.2, cPct: 0.2 },    // Spuntino 1
+    { pPct: 0.3, fPct: 0.25, cPct: 0.3 },   // Pranzo
+    { pPct: 0.1, fPct: 0.15, cPct: 0.15 },  // Spuntino 2
+    { pPct: 0.35, fPct: 0.2, cPct: 0.15 }   // Cena
+  ];
+
+  // Calcolo per pasto (sequenziale semplice)
+  meals.forEach((mealName, mealIdx) => {
+    const ratio = mealMacros[mealIdx];
+    const targetP = plan.protein * ratio.pPct;
+    const targetF = plan.fat * ratio.fPct;
+    const targetC = plan.carbs * ratio.cPct;
+
+    let foods = [];
+
+    // Selezione alimenti (logica semplificata)
+    if (mealName === 'Pranzo' || mealName === 'Cena') {
+      // Sempre proteina da carne/pesce
+      const proteinSources = FOOD_DB.filter(f => f.role === 'protein' && (f.sub === 'carne' || f.sub === 'pesce'));
+      if (proteinSources.length > 0) {
+        const protein = proteinSources[dayIndex % proteinSources.length];
+        const portion = Math.min(targetP / protein.p * 100, 280);
+        foods.push({ ...protein, portion, p: protein.p * portion / 100, f: protein.f * portion / 100, c: protein.c * portion / 100 });
+      }
+    } else {
+      // Altri pasti: uova, formaggio, latticini
+      const proteinSources = FOOD_DB.filter(f => f.role === 'protein' && (f.sub === 'uova' || f.sub === 'formaggio' || f.sub === 'latticini'));
+      if (proteinSources.length > 0) {
+        const protein = proteinSources[dayIndex % proteinSources.length];
+        const portion = Math.min(targetP / protein.p * 100, 150);
+        foods.push({ ...protein, portion, p: protein.p * portion / 100, f: protein.f * portion / 100, c: protein.c * portion / 100 });
+      }
+    }
+
+    // Grassi
+    const fatSources = FOOD_DB.filter(f => f.role === 'fat' && f.sub === 'grasso');
+    if (fatSources.length > 0) {
+      const fat = fatSources[dayIndex % fatSources.length];
+      const portion = Math.min(targetF / fat.f * 100, 150);
+      foods.push({ ...fat, portion, p: fat.p * portion / 100, f: fat.f * portion / 100, c: fat.c * portion / 100 });
+    }
+
+    // Verdure
+    const vegSources = FOOD_DB.filter(f => f.role === 'veg' && f.c <= 4);
+    if (vegSources.length > 0) {
+      const veg = vegSources[(dayIndex + mealIdx) % vegSources.length];
+      foods.push({ ...veg, portion: 200, p: veg.p * 2, f: veg.f * 2, c: veg.c * 2 });
+    }
+
+    // Calcoli totali per pasto
+    const mealTotals = foods.reduce((acc, f) => ({
+      p: acc.p + f.p,
+      f: acc.f + f.f,
+      c: acc.c + f.c,
+    }), { p: 0, f: 0, c: 0 });
+
+    mealTotals.kcal = Math.round(mealTotals.p * 4 + mealTotals.f * 9 + mealTotals.c * 4);
+
+    mealPlan.meals.push({
+      name: mealName,
+      foods: foods.map(f => ({
+        name: f.name,
+        portion: Math.round(f.portion * 10) / 10,
+        p: Math.round(f.p * 10) / 10,
+        f: Math.round(f.f * 10) / 10,
+        c: Math.round(f.c * 10) / 10,
+      })),
+      totals: mealTotals
+    });
+
+    mealPlan.daily.p += mealTotals.p;
+    mealPlan.daily.f += mealTotals.f;
+    mealPlan.daily.c += mealTotals.c;
+  });
+
+  mealPlan.daily.kcal = Math.round(mealPlan.daily.p * 4 + mealPlan.daily.f * 9 + mealPlan.daily.c * 4);
+
+  // CORREZIONI POST-HOC
+  // Fase 1: Proteina
+  if (mealPlan.meals.length > 0) {
+    const lastMeal = mealPlan.meals[mealPlan.meals.length - 1];
+    if (lastMeal.foods.length > 0) {
+      const proteinDelta = plan.protein - mealPlan.daily.p;
+      const lastFood = lastMeal.foods[lastMeal.foods.length - 1];
+      lastFood.p = Math.round((lastFood.p + proteinDelta) * 10) / 10;
+      mealPlan.daily.p += proteinDelta;
+    }
+  }
+
+  // Fase 2: Calorie (solo grasso puro)
+  if (mealPlan.meals.length > 0) {
+    const lastMeal = mealPlan.meals[mealPlan.meals.length - 1];
+    const pureFat = lastMeal.foods.find(f => !f.sub || f.sub === 'grasso');
+    if (pureFat) {
+      const caloriesDelta = plan.targetKcal - mealPlan.daily.kcal;
+      const fatGramsDelta = caloriesDelta / 9;
+      pureFat.f = Math.round((pureFat.f + fatGramsDelta) * 10) / 10;
+      mealPlan.daily.f += fatGramsDelta;
+    }
+  }
+
+  mealPlan.daily.kcal = Math.round(mealPlan.daily.p * 4 + mealPlan.daily.f * 9 + mealPlan.daily.c * 4);
+  mealPlan.grand = { ...mealPlan.daily };
+
+  return mealPlan;
+}
+
+// ============================================================================
 // FUNZIONI - MOTORE ALLENAMENTO
 // ============================================================================
 function buildTrainingDay(dayNum, goal) {
@@ -405,7 +530,7 @@ function Dashboard({ profile }) {
         </button>
       </div>
 
-      {activeTab === 'nutrition' && <NutritionPanel plan={plan} />}
+      {activeTab === 'nutrition' && <NutritionPanel plan={plan} profile={profile} />}
       {activeTab === 'workout' && <WorkoutPanel profile={profile} />}
 
       <button onClick={() => {
@@ -418,19 +543,75 @@ function Dashboard({ profile }) {
   );
 }
 
-function NutritionPanel({ plan }) {
+function NutritionPanel({ plan, profile }) {
+  const [dayIndex, setDayIndex] = React.useState(0);
+  const mealPlan = useMemo(() => buildMealPlan(profile, plan, [], dayIndex, []), [dayIndex, profile, plan]);
+
   return (
     <div className="panel">
       <div className="subtitle">Piano Alimentare Chetogenico</div>
       <div className="info">
         <div className="stat">
-          <span>📊 Suddivisione Macros:</span>
+          <span>📊 Target Giornaliero:</span>
+          <span>{plan.targetKcal} kcal | {plan.protein}g P | {plan.fat}g F | {plan.carbs}g C</span>
+        </div>
+        <div className="stat">
+          <span>📊 Rapporto Macros:</span>
           <span>{((plan.proteinKcal / plan.targetKcal * 100).toFixed(0))}P / {((plan.carbsKcal / plan.targetKcal * 100).toFixed(0))}C / {((plan.fatKcal / plan.targetKcal * 100).toFixed(0))}F</span>
         </div>
       </div>
-      <p style={{fontSize: '0.9em', color: '#999', marginTop: 15}}>
-        ℹ️ Piano nutrizione completo in implementazione. Qui vedrai rotazione giornaliera di pasti con alimenti reali, ricette, liste della spesa.
-      </p>
+
+      <div style={{marginTop: 15, marginBottom: 15}}>
+        <label className="label">Giorno di rotazione: {dayIndex + 1}</label>
+        <input
+          type="range"
+          min="0"
+          max="6"
+          value={dayIndex}
+          onChange={(e) => setDayIndex(parseInt(e.target.value))}
+          style={{width: '100%'}}
+        />
+      </div>
+
+      <div className="subtitle" style={{marginTop: 20}}>Pasti della giornata</div>
+      {mealPlan.meals.map((meal, idx) => (
+        <div key={idx}>
+          <div style={{marginTop: 15, fontWeight: 'bold', color: '#52E092'}}>{meal.name}</div>
+          {meal.foods.map((food, fidx) => (
+            <div key={fidx} className="meal-item">
+              <div className="meal-name">{food.name}</div>
+              <div className="meal-portion">{food.portion}g</div>
+              <div className="macro-bar">
+                <div className="macro-segment macro-protein" style={{width: `${(food.p / (meal.totals.p || 1)) * 100 || 5}%`}}>P{Math.round(food.p)}</div>
+                <div className="macro-segment macro-carbs" style={{width: `${(food.c / (meal.totals.c || 1)) * 100 || 5}%`}}>C{Math.round(food.c)}</div>
+                <div className="macro-segment macro-fat" style={{width: `${(food.f / (meal.totals.f || 1)) * 100 || 5}%`}}>F{Math.round(food.f)}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{padding: '10px', background: '#16241F', borderRadius: '4px', marginTop: '8px', fontSize: '0.9em'}}>
+            <strong>{meal.name} Totale:</strong> {meal.totals.kcal} kcal | P{Math.round(meal.totals.p)}g F{Math.round(meal.totals.f)}g C{Math.round(meal.totals.c)}g
+          </div>
+        </div>
+      ))}
+
+      <div style={{padding: '15px', background: '#213730', borderRadius: '4px', marginTop: '20px', fontWeight: 'bold'}}>
+        <div className="stat">
+          <span>🎯 TOTALE GIORNALIERO</span>
+          <span className="success">{mealPlan.grand.kcal} kcal</span>
+        </div>
+        <div className="stat">
+          <span>Proteine:</span>
+          <span className="success">{Math.round(mealPlan.grand.p)}g (target {plan.protein}g)</span>
+        </div>
+        <div className="stat">
+          <span>Grassi:</span>
+          <span className="success">{Math.round(mealPlan.grand.f)}g (target {plan.fat}g)</span>
+        </div>
+        <div className="stat">
+          <span>Carboidrati:</span>
+          <span className="warning">{Math.round(mealPlan.grand.c)}g (target {plan.carbs}g)</span>
+        </div>
+      </div>
     </div>
   );
 }
